@@ -51,8 +51,7 @@ enum {
 	ADC4_TXFE,
 	ADC5_TXFE,
 	ADC6_TXFE,
-	HPH_DELAY_L,
-	HPH_DELAY_R,
+	HPH_DELAY,
 };
 
 #define TOMTOM_MAD_SLIMBUS_TX_PORT 12
@@ -357,8 +356,7 @@ static struct afe_param_id_clip_bank_sel clip_bank_sel = {
 #define TOMTOM_MCLK_CLK_9P6MHZ 9600000
 
 #define TOMTOM_FORMATS_S16_S24_LE (SNDRV_PCM_FMTBIT_S16_LE | \
-			SNDRV_PCM_FORMAT_S24_LE | \
-			SNDRV_PCM_FMTBIT_S24_3LE)
+			SNDRV_PCM_FORMAT_S24_LE)
 
 #define TOMTOM_FORMATS (SNDRV_PCM_FMTBIT_S16_LE)
 
@@ -4416,42 +4414,21 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		if (w->shift == 5)
-			set_bit(HPH_DELAY_L, &tomtom->status_mask);
-		else if (w->shift == 4)
-			set_bit(HPH_DELAY_R, &tomtom->status_mask);
-		else {
-			pr_err("%s: Invalid w->shift %d\n", __func__,
-				w->shift);
-			return -EINVAL;
-		}
+		set_bit(HPH_DELAY, &tomtom->status_mask);
 		/* Let MBHC module know PA is turning on */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_pre_on);
 		break;
 
 	case SND_SOC_DAPM_POST_PMU:
-		if (test_bit(HPH_DELAY_L, &tomtom->status_mask)) {
+		if (test_bit(HPH_DELAY, &tomtom->status_mask)) {
 			/*
-			 * Make sure to wait 10ms after enabling HPHL
+			 * Make sure to wait 10ms after enabling HPHR_HPHL
 			 * in register 0x1AB
 			*/
 			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY_L, &tomtom->status_mask);
+			clear_bit(HPH_DELAY, &tomtom->status_mask);
 			pr_debug("%s: sleep %d us after %s PA enable\n",
 				__func__, pa_settle_time, w->name);
-		} else if (test_bit(HPH_DELAY_R, &tomtom->status_mask)) {
-			/*
-			 * Make sure to wait 10ms after enabling HPHR
-			 * in register 0x1AB
-			*/
-			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY_R, &tomtom->status_mask);
-			pr_debug("%s: sleep %d us after %s PA enable\n",
-				__func__, pa_settle_time, w->name);
-		} else {
-			pr_err("%s: Invalid w->shift %d\n", __func__,
-				w->shift);
-			return -EINVAL;
 		}
 		if (!high_perf_mode && !tomtom->uhqa_mode) {
 			wcd9xxx_clsh_fsm(codec, &tomtom->clsh_d,
@@ -4462,42 +4439,21 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
-		if (w->shift == 5)
-			set_bit(HPH_DELAY_L, &tomtom->status_mask);
-		else if (w->shift == 4)
-			set_bit(HPH_DELAY_R, &tomtom->status_mask);
-		else {
-			pr_err("%s: Invalid w->shift %d\n", __func__,
-				 w->shift);
-			return -EINVAL;
-		}
+		set_bit(HPH_DELAY, &tomtom->status_mask);
 		break;
 
 	case SND_SOC_DAPM_POST_PMD:
 		/* Let MBHC module know PA turned off */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_post_off);
-		if (test_bit(HPH_DELAY_L, &tomtom->status_mask)) {
+		if (test_bit(HPH_DELAY, &tomtom->status_mask)) {
 			/*
-			 * Make sure to wait 10ms after disabling HPHL
+			 * Make sure to wait 10ms after disabling HPHR_HPHL
 			 * in register 0x1AB
 			*/
 			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY_L, &tomtom->status_mask);
+			clear_bit(HPH_DELAY, &tomtom->status_mask);
 			pr_debug("%s: sleep %d us after %s PA disable\n",
 				__func__, pa_settle_time, w->name);
-		} else if (test_bit(HPH_DELAY_R, &tomtom->status_mask)) {
-			/*
-			 * Make sure to wait 10ms after disabling HPHR
-			 * in register 0x1AB
-			*/
-			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY_R, &tomtom->status_mask);
-			pr_debug("%s: sleep %d us after %s PA disable\n",
-				__func__, pa_settle_time, w->name);
-		} else {
-			pr_err("%s: Invalid w->shift %d\n", __func__,
-				 w->shift);
-			return -EINVAL;
 		}
 
 		break;
@@ -5869,7 +5825,6 @@ static void tomtom_set_rxsb_port_format(struct snd_pcm_hw_params *params,
 		tomtom_p->dai[dai->id].bit_width = 16;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
-	case SNDRV_PCM_FORMAT_S24_3LE:
 		bit_sel = 0x0;
 		tomtom_p->dai[dai->id].bit_width = 24;
 		break;
@@ -5929,7 +5884,6 @@ static void tomtom_set_tx_sb_port_format(struct snd_pcm_hw_params *params,
 		tomtom_p->dai[dai->id].bit_width = 16;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
-	case SNDRV_PCM_FORMAT_S24_3LE:
 		bit_sel = 0x0;
 		tomtom_p->dai[dai->id].bit_width = 24;
 		break;
@@ -6044,7 +5998,6 @@ static int tomtom_hw_params(struct snd_pcm_substream *substream,
 			tomtom->dai[dai->id].bit_width = 16;
 			break;
 		case SNDRV_PCM_FORMAT_S24_LE:
-		case SNDRV_PCM_FORMAT_S24_3LE:
 			tomtom->dai[dai->id].bit_width = 24;
 			i2s_bit_mode = 0x00;
 			break;
@@ -6145,7 +6098,7 @@ static struct snd_soc_dai_driver tomtom_dai[] = {
 		.capture = {
 			.stream_name = "AIF1 Capture",
 			.rates = WCD9330_RATES,
-			.formats = TOMTOM_FORMATS_S16_S24_LE,
+			.formats = TOMTOM_FORMATS,
 			.rate_max = 192000,
 			.rate_min = 8000,
 			.channels_min = 1,
@@ -6173,7 +6126,7 @@ static struct snd_soc_dai_driver tomtom_dai[] = {
 		.capture = {
 			.stream_name = "AIF2 Capture",
 			.rates = WCD9330_RATES,
-			.formats = TOMTOM_FORMATS_S16_S24_LE,
+			.formats = TOMTOM_FORMATS,
 			.rate_max = 192000,
 			.rate_min = 8000,
 			.channels_min = 1,
@@ -6201,7 +6154,7 @@ static struct snd_soc_dai_driver tomtom_dai[] = {
 		.capture = {
 			.stream_name = "AIF3 Capture",
 			.rates = WCD9330_RATES,
-			.formats = TOMTOM_FORMATS_S16_S24_LE,
+			.formats = TOMTOM_FORMATS,
 			.rate_max = 48000,
 			.rate_min = 8000,
 			.channels_min = 1,
@@ -6246,7 +6199,7 @@ static struct snd_soc_dai_driver tomtom_i2s_dai[] = {
 		.playback = {
 			.stream_name = "AIF1 Playback",
 			.rates = WCD9330_RATES,
-			.formats = TOMTOM_FORMATS_S16_S24_LE,
+			.formats = TOMTOM_FORMATS,
 			.rate_max = 192000,
 			.rate_min = 8000,
 			.channels_min = 1,
@@ -6260,7 +6213,7 @@ static struct snd_soc_dai_driver tomtom_i2s_dai[] = {
 		.capture = {
 			.stream_name = "AIF1 Capture",
 			.rates = WCD9330_RATES,
-			.formats = TOMTOM_FORMATS_S16_S24_LE,
+			.formats = TOMTOM_FORMATS,
 			.rate_max = 192000,
 			.rate_min = 8000,
 			.channels_min = 1,
@@ -6274,7 +6227,7 @@ static struct snd_soc_dai_driver tomtom_i2s_dai[] = {
 		.playback = {
 			.stream_name = "AIF2 Playback",
 			.rates = WCD9330_RATES,
-			.formats = TOMTOM_FORMATS_S16_S24_LE,
+			.formats = TOMTOM_FORMATS,
 			.rate_max = 192000,
 			.rate_min = 8000,
 			.channels_min = 1,
@@ -6288,7 +6241,7 @@ static struct snd_soc_dai_driver tomtom_i2s_dai[] = {
 		.capture = {
 			.stream_name = "AIF2 Capture",
 			.rates = WCD9330_RATES,
-			.formats = TOMTOM_FORMATS_S16_S24_LE,
+			.formats = TOMTOM_FORMATS,
 			.rate_max = 192000,
 			.rate_min = 8000,
 			.channels_min = 1,

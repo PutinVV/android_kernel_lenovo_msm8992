@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -231,6 +231,7 @@ static ssize_t restart_level_store(struct device *dev,
 	for (i = 0; i < ARRAY_SIZE(restart_levels); i++)
 		if (!strncasecmp(buf, restart_levels[i], count)) {
 			subsys->restart_level = i;
+			printk("subsystem %s set restart level to %s\n",subsys->desc->name, restart_levels[i]);
 			return count;
 		}
 	return -EPERM;
@@ -289,8 +290,7 @@ static ssize_t firmware_name_store(struct device *dev,
 
 	pr_info("Changing subsys fw_name to %s\n", buf);
 	mutex_lock(&track->lock);
-	strlcpy(subsys->desc->fw_name, buf,
-			 min(count + 1, sizeof(subsys->desc->fw_name)));
+	strlcpy(subsys->desc->fw_name, buf, count + 1);
 	mutex_unlock(&track->lock);
 	return count;
 }

@@ -1036,6 +1036,18 @@ config SCHED_HMP
 	  in their instructions per-cycle capability or the maximum
 	  frequency they can attain.
 
+config SELFISH_TASK_MIGR
+	bool "Selfish Task Migration"
+	depends on SCHED_HMP
+	help
+	  This enables support for HPM systems.  If you say Y here, the 
+	  kernel will migrate the selfish task to power-efficent CPU. If 
+	  you say Y here,selfish task will stay on performance-efficent CPU.
+	  Selfish task is a task who always on the CPU run queue without very little
+	  sleep time.This task should be abnormal in Mobile Phone and will result
+	  in more power consumption,so we place it to the power-efficent CPU
+	  If you don't know what to do here, say N.
+
 config CHECKPOINT_RESTORE
 	bool "Checkpoint/restore support" if EXPERT
 	default n
@@ -1639,18 +1651,6 @@ config BASE_SMALL
 	default 0 if BASE_FULL
 	default 1 if !BASE_FULL
 
-config SYSTEM_TRUSTED_KEYRING
-	bool "Provide system-wide ring of trusted keys"
-	depends on KEYS
-	help
-	  Provide a system keyring to which trusted keys can be added.  Keys in
-	  the keyring are considered to be trusted.  Keys may be added at will
-	  by the kernel from compiled-in data and from hardware key stores, but
-	  userspace may only add extra keys if those keys can be verified by
-	  keys already in the keyring.
-
-	  Keys in this keyring are used by module signature checking.
-
 menuconfig MODULES
 	bool "Enable loadable module support"
 	help
@@ -1723,7 +1723,6 @@ config MODULE_SRCVERSION_ALL
 config MODULE_SIG
 	bool "Module signature verification"
 	depends on MODULES
-	select SYSTEM_TRUSTED_KEYRING
 	select KEYS
 	select CRYPTO
 	select ASYMMETRIC_KEY_TYPE

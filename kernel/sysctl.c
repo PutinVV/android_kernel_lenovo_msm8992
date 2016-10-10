@@ -400,6 +400,36 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &zero,
 	},
+#ifdef CONFIG_SELFISH_TASK_MIGR
+	{
+		.procname	= "sched_selfish_task_migr_enable",
+		.data		= &sysctl_sched_selfish_task_migr_enable,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= sched_hmp_proc_update_handler,
+	},
+	{
+		.procname	= "sched_selfish_task_migr_divsor",
+		.data		= &sysctl_sched_selfish_task_migr_divsor,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= sched_hmp_proc_update_handler,
+	},
+	{
+		.procname	= "sched_selfish_task_migr_threshold",
+		.data		= &sysctl_sched_selfish_task_migr_threshold,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= sched_hmp_proc_update_handler,
+	},
+	{
+		.procname	= "sched_selfish_task_id",
+		.data		= &sysctl_sched_selfish_task_id,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= sched_hmp_proc_update_handler,
+	},
+#endif
 	{
 		.procname	= "sched_upmigrate",
 		.data		= &sysctl_sched_upmigrate_pct,
@@ -1263,6 +1293,10 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec,
 	},
 #endif
+/*
+ * NOTE: do not add new entries to this table unless you have read
+ * Documentation/sysctl/ctl_unnumbered.txt
+ */
 	{ }
 };
 
@@ -1658,28 +1692,6 @@ static struct ctl_table vm_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_doulongvec_minmax,
 	},
-#ifdef CONFIG_HAVE_ARCH_MMAP_RND_BITS
-	{
-		.procname	= "mmap_rnd_bits",
-		.data		= &mmap_rnd_bits,
-		.maxlen		= sizeof(mmap_rnd_bits),
-		.mode		= 0600,
-		.proc_handler	= proc_dointvec_minmax,
-		.extra1		= (void *)&mmap_rnd_bits_min,
-		.extra2		= (void *)&mmap_rnd_bits_max,
-	},
-#endif
-#ifdef CONFIG_HAVE_ARCH_MMAP_RND_COMPAT_BITS
-	{
-		.procname	= "mmap_rnd_compat_bits",
-		.data		= &mmap_rnd_compat_bits,
-		.maxlen		= sizeof(mmap_rnd_compat_bits),
-		.mode		= 0600,
-		.proc_handler	= proc_dointvec_minmax,
-		.extra1		= (void *)&mmap_rnd_compat_bits_min,
-		.extra2		= (void *)&mmap_rnd_compat_bits_max,
-	},
-#endif
 	{ }
 };
 
